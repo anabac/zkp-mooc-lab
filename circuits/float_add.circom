@@ -207,7 +207,10 @@ template RightShift(shift) {
     signal input x;
     signal output y;
 
-    // TODO
+    y <-- x >> shift;
+    component bit_length = CheckBitLength(shift);
+    bit_length.in <== x - y * (1 << shift);
+    bit_length.out === 1;
 }
 
 /*
