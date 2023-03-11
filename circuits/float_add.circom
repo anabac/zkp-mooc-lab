@@ -143,6 +143,7 @@ template LessThan(n) {
  * Outputs `out` = 1 if `in` is at most `b` bits long, and 0 otherwise.
  */
 template CheckBitLength(b) {
+    assert(b < 254);
     signal input in;
     signal output out;
 
@@ -201,16 +202,29 @@ template CheckWellFormedness(k, p) {
 }
 
 /*
- * Right-shifts `x` by `shift` bits to output `y`, where `shift` is a public circuit parameter.
+ * Right-shifts `b`-bit long `x` by `shift` bits to output `y`, where `shift` is a public circuit parameter.
  */
-template RightShift(shift) {
+template RightShift(b, shift) {
+    assert(shift < b);
     signal input x;
     signal output y;
+
+    component x_bit_length = CheckBitLength(b);
+    x_bit_length.in <== x;
+    x_bit_length.out === 1;
 
     y <-- x >> shift;
     component bit_length = CheckBitLength(shift);
     bit_length.in <== x - y * (1 << shift);
     bit_length.out === 1;
+
+    // component x_n2b = Num2Bits(b);
+    // x_n2b.in <== x;
+    // component y_b2n = Bits2Num(shift);
+    // for (var i = 0; i < b-shift; i++) {
+    //     y_b2n.bits[i] <== x_n2b.bits[shift+i];
+    // }
+    // y <== y_b2n.out;
 }
 
 /*
@@ -236,7 +250,7 @@ template RoundAndCheck(k, p, P) {
     // Case I: no overflow
     // compute (m + 2^{round_amt-1}) >> round_amt
     var m_prime = m + (1 << (round_amt-1));
-    component right_shift = RightShift(round_amt);
+    component right_shift = RightShift(P+1, round_amt);
     right_shift.x <== m_prime;
     var m_out_1 = right_shift.y;
     var e_out_1 = e;
