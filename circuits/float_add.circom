@@ -146,7 +146,20 @@ template CheckBitLength(b) {
     signal input in;
     signal output out;
 
-    // TODO
+    // signal res;
+    // res <-- in < (1 << b);
+    // out <== res;
+
+    // component is_zero = IsZero();
+    // signal z <-- in >> b;
+    // is_zero.in <== z;
+    // out <== is_zero.out;
+
+    var m = 1 << b;
+    component less_than = LessThan(252);
+    less_than.in[0] <== in;
+    less_than.in[1] <== m;
+    out <== less_than.out;
 }
 
 /*
