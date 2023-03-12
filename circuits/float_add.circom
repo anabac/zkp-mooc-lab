@@ -286,7 +286,29 @@ template LeftShift(shift_bound) {
     signal input skip_checks;
     signal output y;
 
-    // TODO
+    // skip_checks is either 1 or 0
+    skip_checks * (1 - skip_checks) === 0;
+    // if skip_checks == 1 then shift < shift_bound
+    component bound_constraint = LessThan(252); // I should decrease this 252 but I dont know how
+    bound_constraint.in <== [-1, (1-skip_checks) * (shift_bound-shift-1)];
+    bound_constraint.out === 1;
+    // shift >= 0
+    component shift_gt0 = LessThan(252); // I should decrease this 252 but I dont know how
+    shift_gt0.in <== [-1, shift];
+    shift_gt0.out === 1;
+    // shifted1 = skip_checks ? 1 : 1 << shift
+    component is_shifted1_2i[shift_bound];
+    signal shifted1 <-- 1 << (shift * (1-skip_checks));
+    var sum = 0;
+    for (var i = 0; i < shift_bound; i++) {
+        is_shifted1_2i[i] = IsEqual();
+        is_shifted1_2i[i].in <== [shifted1, (1 << i)];
+        sum += is_shifted1_2i[i].out * (1 << i);
+    }
+    shifted1 === sum;
+    
+    y <== x * shifted1;
+
 }
 
 /*
