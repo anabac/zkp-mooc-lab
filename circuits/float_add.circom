@@ -219,7 +219,7 @@ template RightShift(b, shift) {
     component rem_bit_length = CheckBitLength(shift);
     rem_bit_length.in <== rem;
     rem_bit_length.out === 1;
-    
+
     x === y * (1 << shift) + rem;
 }
 
@@ -440,7 +440,7 @@ template FloatAdd(k, p) {
     if_m.L <== alpha_m;
     // else:
     // alpha_m <<= diff
-    component alpha_m_lshift = LeftShift(1 << k);
+    component alpha_m_lshift = LeftShift(p+2);
     alpha_m_lshift.x <== alpha_m;
     alpha_m_lshift.shift <== diff;
     alpha_m_lshift.skip_checks <== or_condition.out;
