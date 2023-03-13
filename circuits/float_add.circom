@@ -324,7 +324,25 @@ template MSNZB(b) {
     signal input skip_checks;
     signal output one_hot[b];
 
-    // TODO
+    // skip_checks is either 1 or 0
+    skip_checks * (1 - skip_checks) === 0;
+    // in != 0
+    component is_in_0 = IsZero();
+    is_in_0.in <== in;
+    is_in_0.out * (1 - skip_checks) === 0;
+
+    component in_n2b = Num2Bits(b);
+    in_n2b.in <== in;
+
+    var sum_bits = 0;
+    component msnzb_not_found[b];
+    for (var i = b-1; i >= 0; i--) {
+        msnzb_not_found[i] = IsZero();
+        msnzb_not_found[i].in <== sum_bits;
+        one_hot[i] <== msnzb_not_found[i].out * in_n2b.bits[i];
+        
+        sum_bits += in_n2b.bits[i];
+    }
 }
 
 /*
