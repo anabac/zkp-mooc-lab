@@ -372,9 +372,9 @@ template Normalize(k, p, P) {
     two_pow_ell_b2n.bits <== ell.one_hot;
 
     // m <<= (P - ell)
-    signal two_pow_P_ell <-- (1 << P)/two_pow_ell_b2n.out;
-    two_pow_P_ell * two_pow_ell_b2n.out === (1 << P) * (1 - skip_checks);
-    m_out <== m * two_pow_P_ell;
+    signal inv <-- skip_checks ? 0 : 1/two_pow_ell_b2n.out;
+    inv * two_pow_ell_b2n.out === 1 - skip_checks;
+    m_out <== m * (1 << P) * inv;
 
     // e = e + ell - p
     var ell_num = 0;
@@ -397,5 +397,71 @@ template FloatAdd(k, p) {
     signal output e_out;
     signal output m_out;
 
-    // TODO
+    // Well-formedness
+    component check_well_formed_0 = CheckWellFormedness(k, p);
+    check_well_formed_0.e <== e[0];
+    check_well_formed_0.m <== m[0];
+    component check_well_formed_1 = CheckWellFormedness(k, p);
+    check_well_formed_1.e <== e[1];
+    check_well_formed_1.m <== m[1];
+
+    // Magnitude comparison
+    var mgn_1 = e[0] * (1 << (p+1)) + m[0];
+    var mgn_2 = e[1] * (1 << (p+1)) + m[1];
+    component mgn_compare = LessThan(k+p+1);
+    mgn_compare.in <== [mgn_1, mgn_2];
+
+    component switch_e = Switcher();
+    switch_e.sel <== mgn_compare.out;
+    switch_e.L <== e[0];
+    switch_e.R <== e[1];
+    var alpha_e = switch_e.outL;
+    var beta_e = switch_e.outR;
+
+    component switch_m = Switcher();
+    switch_m.sel <== mgn_compare.out;
+    switch_m.L <== m[0];
+    switch_m.R <== m[1];
+    var alpha_m = switch_m.outL;
+    var beta_m = switch_m.outR;
+
+    var diff = alpha_e - beta_e;
+    // or_condition = diff > p + 1 or alpha_e == 0
+    component pplus1_lt_diff = LessThan(k);
+    pplus1_lt_diff.in <== [p+1, diff];
+    component is_alpha_e_zero = IsZero();
+    is_alpha_e_zero.in <== alpha_e;
+    component or_condition = OR();
+    or_condition.a <== pplus1_lt_diff.out;
+    or_condition.b <== is_alpha_e_zero.out;
+    component if_e = IfThenElse();
+    if_e.cond <== or_condition.out;
+    component if_m = IfThenElse();
+    if_m.cond <== or_condition.out;
+    // if or_condition:
+    if_e.L <== alpha_e;
+    if_m.L <== alpha_m;
+    // else:
+    // alpha_m <<= diff
+    component alpha_m_lshift = LeftShift(1 << k);
+    alpha_m_lshift.x <== alpha_m;
+    alpha_m_lshift.shift <== diff;
+    alpha_m_lshift.skip_checks <== or_condition.out;
+    alpha_m = alpha_m_lshift.y;
+
+    component normalized = Normalize(k, p, 2*p+1);
+    normalized.m <== alpha_m + beta_m;
+    normalized.e <== beta_e;
+    normalized.skip_checks <== or_condition.out;
+
+    component round_check = RoundAndCheck(k, p, 2*p+1);
+    round_check.e <== normalized.e_out;
+    round_check.m <== normalized.m_out;
+
+    if_e.R <== round_check.e_out;
+    if_m.R <== round_check.m_out;
+
+    // return
+    e_out <== if_e.out;
+    m_out <== if_m.out;
 }
