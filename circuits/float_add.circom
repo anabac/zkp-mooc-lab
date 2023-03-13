@@ -337,11 +337,12 @@ template MSNZB(b) {
     var sum_bits = 0;
     component msnzb_not_found[b];
     for (var i = b-1; i >= 0; i--) {
-        msnzb_not_found[i] = IsZero();
-        msnzb_not_found[i].in <== sum_bits;
-        one_hot[i] <== msnzb_not_found[i].out * in_n2b.bits[i];
+        one_hot[i] <== (1 - sum_bits) * in_n2b.bits[i];
         
-        sum_bits += in_n2b.bits[i];
+        msnzb_not_found[i] = OR();
+        msnzb_not_found[i].a <== sum_bits;
+        msnzb_not_found[i].b <== in_n2b.bits[i];
+        sum_bits = msnzb_not_found[i].out;
     }
 }
 
