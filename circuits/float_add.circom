@@ -209,22 +209,18 @@ template RightShift(b, shift) {
     signal input x;
     signal output y;
 
-    component x_bit_length = CheckBitLength(b);
-    x_bit_length.in <== x;
-    x_bit_length.out === 1;
-
     y <-- x >> shift;
-    component bit_length = CheckBitLength(shift);
-    bit_length.in <== x - y * (1 << shift);
-    bit_length.out === 1;
 
-    // component x_n2b = Num2Bits(b);
-    // x_n2b.in <== x;
-    // component y_b2n = Bits2Num(shift);
-    // for (var i = 0; i < b-shift; i++) {
-    //     y_b2n.bits[i] <== x_n2b.bits[shift+i];
-    // }
-    // y <== y_b2n.out;
+    component y_bit_length = CheckBitLength(b-shift);
+    y_bit_length.in <== y;
+    y_bit_length.out === 1;
+
+    signal rem <-- x - y * (1 << shift);
+    component rem_bit_length = CheckBitLength(shift);
+    rem_bit_length.in <== rem;
+    rem_bit_length.out === 1;
+    
+    x === y * (1 << shift) + rem;
 }
 
 /*
