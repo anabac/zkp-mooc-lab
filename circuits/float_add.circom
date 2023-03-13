@@ -288,24 +288,25 @@ template LeftShift(shift_bound) {
 
     // skip_checks is either 1 or 0
     skip_checks * (1 - skip_checks) === 0;
-    // if skip_checks == 1 then shift < shift_bound
-    component bound_constraint = LessThan(252); // I should decrease this 252 but I dont know how
-    bound_constraint.in <== [-1, (1-skip_checks) * (shift_bound-shift-1)];
-    bound_constraint.out === 1;
-    // shift >= 0
-    component shift_gt0 = LessThan(252); // I should decrease this 252 but I dont know how
-    shift_gt0.in <== [-1, shift];
-    shift_gt0.out === 1;
-    // shifted1 = skip_checks ? 1 : 1 << shift
-    component is_shifted1_2i[shift_bound];
-    signal shifted1 <-- 1 << (shift * (1-skip_checks));
-    var sum = 0;
+
+    component equals_shift[shift_bound];
+    var bounded_shift = 0;
+
+    signal shifted1 <-- (1 << shift) * (1-skip_checks);
+    var two_pow_shift = 0;
+    
+    // bounded_shift = 1 iff 0 <= shift < shift_bound
     for (var i = 0; i < shift_bound; i++) {
-        is_shifted1_2i[i] = IsEqual();
-        is_shifted1_2i[i].in <== [shifted1, (1 << i)];
-        sum += is_shifted1_2i[i].out * (1 << i);
+        equals_shift[i] = IsEqual();
+        equals_shift[i].in <== [shift, i];
+        bounded_shift += equals_shift[i].out;
+
+        two_pow_shift += equals_shift[i].out * (1 << i);
     }
-    shifted1 === sum;
+    // if skip_checks == 0 then 0 <= shift < shift_bound
+    (1 - skip_checks) * (1 - bounded_shift) === 0;
+    // if skip_checks == 0 then shifted1 == two_pow_shift else shifted1 == 0
+    shifted1 === two_pow_shift * (1-skip_checks);
     
     y <== x * shifted1;
 
